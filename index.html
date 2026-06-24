@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phigros RKS Tracker</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --text: #1d2433;
+      --muted: #647084;
+      --line: #d9deea;
+      --accent: #1664d9;
+      --accent-soft: #e8f0ff;
+      --ok: #0f7a48;
+      --danger: #b42318;
+      --shadow: 0 10px 28px rgba(32, 43, 68, 0.08);
+      --table-head-top: 72px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      border-bottom: 1px solid var(--line);
+      background: rgba(247, 248, 251, 0.94);
+      backdrop-filter: blur(10px);
+    }
+
+    .topbar {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 750;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    button, .file-label {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 6px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button.danger {
+      border-color: #f3b8b2;
+      color: var(--danger);
+    }
+
+    button:active, .file-label:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.55; cursor: wait; }
+    input[type="file"] { display: none; }
+
+    main {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .notice {
+      border: 1px solid #b8cdf7;
+      background: #eef5ff;
+      color: #20446f;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+
+    .notice.error {
+      border-color: #f3b8b2;
+      background: #fff1ef;
+      color: #8f1d14;
+    }
+
+    .version-panel, .filters {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .version-panel {
+      grid-template-columns: auto minmax(150px, 220px) minmax(150px, 220px) auto auto auto 1fr;
+    }
+
+    .filters {
+      grid-template-columns: minmax(220px, 1fr) auto auto auto;
+    }
+
+    .version-label {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .date-input, .search, select {
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      padding: 0 10px;
+      font: inherit;
+      min-width: 0;
+    }
+
+    .search { padding: 0 12px; }
+
+    .version-note {
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      min-height: 76px;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .metric .value {
+      margin-top: 8px;
+      font-size: 24px;
+      font-weight: 760;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric .hint {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .segmented {
+      display: inline-grid;
+      grid-template-columns: repeat(5, 48px);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      overflow: hidden;
+      height: 38px;
+      background: #fff;
+    }
+
+    .segmented button {
+      border: 0;
+      border-radius: 0;
+      height: 36px;
+      padding: 0;
+      box-shadow: none;
+    }
+
+    .segmented button.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .table-wrap {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: visible;
+      box-shadow: var(--shadow);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    thead { background: #eef2f7; }
+
+    thead th {
+      position: sticky;
+      top: var(--table-head-top);
+      z-index: 3;
+      background: #eef2f7;
+      box-shadow: 0 1px 0 var(--line);
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: middle;
+      font-size: 13px;
+    }
+
+    th {
+      color: #38445a;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    tbody tr:hover { background: #f8fbff; }
+
+    .cover-col { width: 64px; }
+    .song-col { width: 31%; }
+    .level-col { width: 68px; }
+    .const-col { width: 74px; }
+    .acc-col { width: 108px; }
+    .rks-col { width: 100px; }
+    .tag-col { width: 118px; }
+
+    .cover {
+      width: 46px;
+      height: 46px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #e5e9f2;
+      display: block;
+    }
+
+    .song-title {
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .song-meta {
+      margin-top: 3px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+
+    .level-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 38px;
+      height: 24px;
+      border-radius: 999px;
+      background: #eef2f7;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .level-EZ { color: #0d6f45; background: #e7f5ee; }
+    .level-HD { color: #8b6400; background: #fff3cf; }
+    .level-IN { color: #a02b2b; background: #ffe8e8; }
+    .level-AT { color: #2d3d8f; background: #e9edff; }
+
+    .acc-input {
+      width: 88px;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 8px;
+      font: inherit;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .number {
+      font-variant-numeric: tabular-nums;
+      font-weight: 650;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      border-radius: 999px;
+      padding: 0 7px;
+      font-size: 12px;
+      background: #eef2f7;
+      color: #526078;
+      white-space: nowrap;
+    }
+
+    .tag.b27 { background: #e8f0ff; color: var(--accent); }
+    .tag.phi { background: #e8f7ef; color: var(--ok); }
+    .tag.empty { background: #f3f4f7; color: #8a94a6; }
+
+    .empty-state {
+      padding: 28px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .topbar { grid-template-columns: 1fr; }
+      .actions { justify-content: flex-start; }
+      .summary { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+      .version-panel, .filters { grid-template-columns: 1fr; }
+      .segmented { width: 100%; grid-template-columns: repeat(5, 1fr); }
+      .composer-cell, .charter-cell { display: none; }
+      .song-col { width: 42%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div>
+        <h1>Phigros RKS Tracker</h1>
+        <div class="subtitle" id="dataMeta">Loading Phigros chart data...</div>
+      </div>
+      <div class="actions">
+        <label class="file-label" title="Import an exported CSV backup">
+          Import CSV
+          <input id="importFile" type="file" accept=".csv,text/csv">
+        </label>
+        <button id="exportCsv" class="primary" title="Export all date versions">Export CSV</button>
+        <button id="clearAcc" class="danger" title="Clear ACC for the current date version">Clear ACC</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="notice" class="notice">The app loads community chart metadata from GitHub at runtime. Your ACC data stays in this browser unless you export it.</div>
+
+    <section class="version-panel" aria-label="Date versions">
+      <div class="version-label">Date version</div>
+      <select id="versionSelect" aria-label="Choose date version"></select>
+      <input id="versionDate" class="date-input" type="date" aria-label="New date">
+      <button id="newVersion" title="Create an empty date version">New</button>
+      <button id="copyVersion" title="Copy current ACC to the selected date">Copy current</button>
+      <button id="deleteVersion" class="danger" title="Delete the current date version">Delete</button>
+      <div class="version-note" id="versionNote">Each date version stores an independent ACC snapshot.</div>
+    </section>
+
+    <section class="summary" aria-label="RKS summary">
+      <div class="metric">
+        <div class="label">Current RKS</div>
+        <div class="value" id="totalRks">0.0000</div>
+        <div class="hint">B27 + 3phi / 30</div>
+      </div>
+      <div class="metric">
+        <div class="label">B27 Sum</div>
+        <div class="value" id="b27Sum">0.0000</div>
+        <div class="hint" id="b27Floor">Floor: -</div>
+      </div>
+      <div class="metric">
+        <div class="label">3phi Sum</div>
+        <div class="value" id="phiSum">0.0000</div>
+        <div class="hint" id="phiCount">Phi filled: 0</div>
+      </div>
+      <div class="metric">
+        <div class="label">ACC Filled</div>
+        <div class="value" id="filledCount">0</div>
+        <div class="hint" id="chartCount">Charts: 0</div>
+      </div>
+      <div class="metric">
+        <div class="label">Best Chart</div>
+        <div class="value" id="bestRks">0.0000</div>
+        <div class="hint" id="bestName">-</div>
+      </div>
+    </section>
+
+    <section class="filters" aria-label="Filters">
+      <input id="search" class="search" type="search" placeholder="Search song / composer / charter / id">
+      <div class="segmented" role="group" aria-label="Difficulty filter">
+        <button class="active" data-level="ALL">All</button>
+        <button data-level="EZ">EZ</button>
+        <button data-level="HD">HD</button>
+        <button data-level="IN">IN</button>
+        <button data-level="AT">AT</button>
+      </div>
+      <select id="sortBy" aria-label="Sort">
+        <option value="constantDesc">Constant high to low</option>
+        <option value="rksDesc">Chart RKS high to low</option>
+        <option value="songAsc">Song A-Z</option>
+        <option value="unfilled">Unfilled first</option>
+      </select>
+      <select id="viewMode" aria-label="View mode">
+        <option value="all">Show all</option>
+        <option value="filled">Filled only</option>
+        <option value="b27">B27 only</option>
+        <option value="phi">Phi only</option>
+      </select>
+    </section>
+
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="cover-col">Art</th>
+            <th class="song-col">Song</th>
+            <th class="level-col">Level</th>
+            <th class="const-col">Const.</th>
+            <th class="acc-col">ACC</th>
+            <th class="rks-col">RKS</th>
+            <th class="tag-col">Tags</th>
+            <th class="composer-cell">Composer / Illustrator</th>
+            <th class="charter-cell">Charter</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="emptyState" class="empty-state">Loading charts...</div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "phigros-rks-tracker-v3";
+    const LEGACY_KEYS = ["phigros-rks-tracker-v2", "phigros-rks-tracker-v1"];
+    const INFO_URL = "https://raw.githubusercontent.com/Catrong/phi-plugin/main/resources/info/info.csv";
+    const DIFF_URL = "https://raw.githubusercontent.com/Catrong/phi-plugin/main/resources/info/difficulty.csv";
+    const ILL_LOW_BASE = "https://raw.githubusercontent.com/Catrong/phi-plugin-ill/main/illLow/";
+    const LEVELS = ["EZ", "HD", "IN", "AT"];
+
+    let charts = [];
+    const today = localDateString();
+    const store = loadStore();
+    const state = {
+      versions: store.versions,
+      currentVersion: store.currentVersion,
+      query: "",
+      level: "ALL",
+      sortBy: "constantDesc",
+      viewMode: "all",
+      computed: new Map()
+    };
+
+    const els = {
+      tbody: document.getElementById("tbody"),
+      emptyState: document.getElementById("emptyState"),
+      search: document.getElementById("search"),
+      sortBy: document.getElementById("sortBy"),
+      viewMode: document.getElementById("viewMode"),
+      versionSelect: document.getElementById("versionSelect"),
+      versionDate: document.getElementById("versionDate"),
+      versionNote: document.getElementById("versionNote"),
+      pageHeader: document.querySelector("header"),
+      notice: document.getElementById("notice"),
+      totalRks: document.getElementById("totalRks"),
+      b27Sum: document.getElementById("b27Sum"),
+      b27Floor: document.getElementById("b27Floor"),
+      phiSum: document.getElementById("phiSum"),
+      phiCount: document.getElementById("phiCount"),
+      filledCount: document.getElementById("filledCount"),
+      chartCount: document.getElementById("chartCount"),
+      bestRks: document.getElementById("bestRks"),
+      bestName: document.getElementById("bestName"),
+      dataMeta: document.getElementById("dataMeta")
+    };
+
+    function localDateString() {
+      const date = new Date();
+      const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+      return offsetDate.toISOString().slice(0, 10);
+    }
+
+    function loadStore() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        if (saved && saved.versions && saved.currentVersion) return normalizeStore(saved);
+      } catch {}
+
+      for (const key of LEGACY_KEYS) {
+        try {
+          const saved = JSON.parse(localStorage.getItem(key) || "null");
+          if (saved && saved.versions && saved.currentVersion) return normalizeStore(saved);
+          if (saved && typeof saved === "object" && !saved.versions) {
+            return normalizeStore({ currentVersion: today, versions: { [today]: { label: today, acc: saved } } });
+          }
+        } catch {}
+      }
+
+      return normalizeStore({ currentVersion: today, versions: { [today]: { label: today, acc: {} } } });
+    }
+
+    function normalizeStore(saved) {
+      const versions = saved.versions && typeof saved.versions === "object" ? saved.versions : {};
+      if (!Object.keys(versions).length) versions[today] = { label: today, acc: {} };
+      for (const [key, value] of Object.entries(versions)) {
+        if (!value || typeof value !== "object") versions[key] = { label: key, acc: {} };
+        else if (!value.acc || typeof value.acc !== "object") versions[key].acc = {};
+        versions[key].label = versions[key].label || key;
+      }
+      const keys = Object.keys(versions).sort();
+      const currentVersion = versions[saved.currentVersion] ? saved.currentVersion : keys[keys.length - 1];
+      return { currentVersion, versions };
+    }
+
+    function currentAcc() {
+      if (!state.versions[state.currentVersion]) {
+        state.versions[state.currentVersion] = { label: state.currentVersion, acc: {} };
+      }
+      return state.versions[state.currentVersion].acc;
+    }
+
+    function saveStore() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentVersion: state.currentVersion, versions: state.versions }));
+    }
+
+    function sortedVersionKeys() {
+      return Object.keys(state.versions).sort((a, b) => b.localeCompare(a));
+    }
+
+    function renderVersions() {
+      const keys = sortedVersionKeys();
+      els.versionSelect.innerHTML = keys.map(key => {
+        const count = Object.keys(state.versions[key].acc || {}).length;
+        return `<option value="${escapeAttr(key)}">${escapeHtml(key)} (${count})</option>`;
+      }).join("");
+      els.versionSelect.value = state.currentVersion;
+      els.versionDate.value = state.currentVersion;
+      els.versionNote.textContent = `Current: ${state.currentVersion}. Each date version stores an independent ACC snapshot.`;
+    }
+
+    function updateStickyHeaderOffset() {
+      const height = els.pageHeader ? Math.ceil(els.pageHeader.getBoundingClientRect().height) : 0;
+      document.documentElement.style.setProperty("--table-head-top", `${height}px`);
+    }
+
+    function parseAcc(value) {
+      if (value === null || value === undefined) return null;
+      const text = String(value).trim().replace("%", "");
+      if (!text) return null;
+      const parsed = Number(text);
+      if (!Number.isFinite(parsed)) return null;
+      return Math.max(0, Math.min(100, parsed));
+    }
+
+    function calcRks(acc, constant) {
+      if (acc === null || acc < 70) return 0;
+      return Math.pow((acc - 55) / 45, 2) * constant;
+    }
+
+    function fmt(value, digits = 2) {
+      return Number(value || 0).toFixed(digits);
+    }
+
+    function fmtRks(value) {
+      return fmt(value, 4);
+    }
+
+    function recompute() {
+      const accMap = currentAcc();
+      const rows = charts.map(chart => {
+        const acc = parseAcc(accMap[chart.chartId]);
+        const rks = calcRks(acc, chart.constant);
+        return { ...chart, acc, rks, isPhi: acc === 100, b27Rank: null, phiRank: null };
+      });
+
+      const b27 = rows.filter(row => row.rks > 0).sort((a, b) => b.rks - a.rks || b.constant - a.constant).slice(0, 27);
+      b27.forEach((row, index) => row.b27Rank = index + 1);
+
+      const phis = rows.filter(row => row.isPhi).sort((a, b) => b.constant - a.constant || a.song.localeCompare(b.song, "zh-Hans-CN")).slice(0, 3);
+      phis.forEach((row, index) => row.phiRank = index + 1);
+
+      state.computed = new Map(rows.map(row => [row.chartId, row]));
+
+      const b27Sum = b27.reduce((sum, row) => sum + row.rks, 0);
+      const phiSum = phis.reduce((sum, row) => sum + row.constant, 0);
+      const total = (b27Sum + phiSum) / 30;
+      const filled = rows.filter(row => row.acc !== null);
+      const best = rows.slice().sort((a, b) => b.rks - a.rks)[0];
+      const floor = b27.length === 27 ? b27[26] : null;
+
+      els.totalRks.textContent = fmtRks(total);
+      els.b27Sum.textContent = fmtRks(b27Sum);
+      els.b27Floor.textContent = floor ? `Floor: ${floor.song} ${floor.level} ${fmtRks(floor.rks)}` : "Floor: fewer than 27 valid scores";
+      els.phiSum.textContent = fmtRks(phiSum);
+      els.phiCount.textContent = `Phi filled: ${rows.filter(row => row.isPhi).length}`;
+      els.filledCount.textContent = String(filled.length);
+      els.chartCount.textContent = `Charts: ${charts.length}`;
+      els.bestRks.textContent = fmtRks(best ? best.rks : 0);
+      els.bestName.textContent = best && best.rks > 0 ? `${best.song} ${best.level}` : "-";
+    }
+
+    function filteredRows() {
+      const query = state.query.trim().toLowerCase();
+      let rows = charts.map(chart => state.computed.get(chart.chartId) || chart);
+
+      if (state.level !== "ALL") rows = rows.filter(row => row.level === state.level);
+      if (query) {
+        rows = rows.filter(row => [row.song, row.composer, row.illustrator, row.charter, row.id].join(" ").toLowerCase().includes(query));
+      }
+
+      if (state.viewMode === "filled") rows = rows.filter(row => row.acc !== null);
+      if (state.viewMode === "b27") rows = rows.filter(row => row.b27Rank);
+      if (state.viewMode === "phi") rows = rows.filter(row => row.isPhi);
+
+      rows.sort((a, b) => {
+        if (state.sortBy === "rksDesc") return b.rks - a.rks || b.constant - a.constant;
+        if (state.sortBy === "songAsc") return a.song.localeCompare(b.song, "zh-Hans-CN") || a.level.localeCompare(b.level);
+        if (state.sortBy === "unfilled") return (a.acc !== null) - (b.acc !== null) || b.constant - a.constant;
+        return b.constant - a.constant || a.song.localeCompare(b.song, "zh-Hans-CN");
+      });
+      return rows;
+    }
+
+    function render() {
+      renderVersions();
+      recompute();
+      const rows = filteredRows();
+      els.emptyState.hidden = rows.length > 0;
+      els.emptyState.textContent = charts.length ? "No charts match the current filters." : "Loading charts...";
+      els.tbody.innerHTML = rows.map(row => {
+        const tags = [];
+        if (row.b27Rank) tags.push(`<span class="tag b27">B${row.b27Rank}</span>`);
+        if (row.phiRank) tags.push(`<span class="tag phi">P${row.phiRank}</span>`);
+        if (!tags.length) tags.push(`<span class="tag empty">-</span>`);
+        const accValue = row.acc === null ? "" : String(currentAcc()[row.chartId]);
+        return `
+          <tr>
+            <td><img class="cover" src="${escapeAttr(row.imageLow)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"></td>
+            <td>
+              <div class="song-title" title="${escapeAttr(row.song)}">${escapeHtml(row.song)}</div>
+              <div class="song-meta" title="${escapeAttr(row.id)}">${escapeHtml(row.id)}</div>
+            </td>
+            <td><span class="level-pill level-${row.level}">${row.level}</span></td>
+            <td class="number">${fmt(row.constant, 1)}</td>
+            <td><input class="acc-input" data-chart-id="${escapeAttr(row.chartId)}" inputmode="decimal" value="${escapeAttr(accValue)}" placeholder="0-100"></td>
+            <td class="number">${fmtRks(row.rks)}</td>
+            <td><div class="tags">${tags.join("")}</div></td>
+            <td class="composer-cell">
+              <div>${escapeHtml(row.composer || "-")}</div>
+              <div class="song-meta">${escapeHtml(row.illustrator || "-")}</div>
+            </td>
+            <td class="charter-cell">${escapeHtml(row.charter || "-")}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value);
+    }
+
+    function csvCell(value) {
+      const text = String(value);
+      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let quoted = false;
+      for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+        const next = text[i + 1];
+        if (quoted) {
+          if (char === '"' && next === '"') { cell += '"'; i += 1; }
+          else if (char === '"') quoted = false;
+          else cell += char;
+        } else if (char === '"') quoted = true;
+        else if (char === ",") { row.push(cell); cell = ""; }
+        else if (char === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+        else if (char !== "\r") cell += char;
+      }
+      row.push(cell);
+      rows.push(row);
+      return rows.filter(item => item.some(cellText => cellText.trim()));
+    }
+
+    function rowsToObjects(rows) {
+      const header = rows.shift() || [];
+      return rows.map(row => Object.fromEntries(header.map((key, index) => [key, row[index] ?? ""])));
+    }
+
+    async function loadCharts() {
+      setBusy(true);
+      try {
+        const [infoText, diffText] = await Promise.all([
+          fetch(INFO_URL).then(checkResponse).then(res => res.text()),
+          fetch(DIFF_URL).then(checkResponse).then(res => res.text())
+        ]);
+        const infoRows = rowsToObjects(parseCsv(infoText.replace(/^\uFEFF/, "")));
+        const diffRows = rowsToObjects(parseCsv(diffText.replace(/^\uFEFF/, "")));
+        const infoById = new Map(infoRows.map(row => [row.id, row]));
+        const nextCharts = [];
+
+        for (const diff of diffRows) {
+          const meta = infoById.get(diff.id) || {};
+          for (const level of LEVELS) {
+            const constant = Number.parseFloat(diff[level]);
+            if (!Number.isFinite(constant)) continue;
+            nextCharts.push({
+              id: diff.id,
+              chartId: `${diff.id}|${level}`,
+              song: meta.song || diff.id,
+              composer: meta.composer || "",
+              illustrator: meta.illustrator || "",
+              level,
+              constant: Math.round(constant * 10) / 10,
+              charter: meta[level] || "",
+              imageLow: `${ILL_LOW_BASE}${encodeURIComponent(diff.id)}.png`
+            });
+          }
+        }
+
+        charts = nextCharts.sort((a, b) => b.constant - a.constant || a.song.localeCompare(b.song, "zh-Hans-CN") || a.level.localeCompare(b.level));
+        els.notice.classList.remove("error");
+        els.notice.textContent = "Chart metadata loaded. Your ACC data stays in this browser unless you export it.";
+        els.dataMeta.textContent = `Loaded ${charts.length} charts from community metadata.`;
+      } catch (error) {
+        els.notice.classList.add("error");
+        els.notice.textContent = `Could not load chart metadata: ${error.message}. Refresh or check your network connection.`;
+        els.dataMeta.textContent = "Failed to load chart data.";
+      } finally {
+        setBusy(false);
+        render();
+      }
+    }
+
+    function checkResponse(response) {
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      return response;
+    }
+
+    function setBusy(isBusy) {
+      document.querySelectorAll("button, .file-label").forEach(item => item.toggleAttribute("disabled", isBusy));
+    }
+
+    function exportCsv() {
+      recompute();
+      const headers = ["version", "chartId", "song", "level", "constant", "acc", "rks", "isPhi", "b27Rank", "phiRank", "composer", "illustrator", "charter"];
+      const lines = [headers.join(",")];
+      const previous = state.currentVersion;
+      for (const version of sortedVersionKeys().slice().reverse()) {
+        state.currentVersion = version;
+        recompute();
+        for (const chart of charts) {
+          const row = state.computed.get(chart.chartId);
+          lines.push(headers.map(key => {
+            if (key === "version") return csvCell(version);
+            if (key === "rks") return csvCell(fmt(row.rks, 6));
+            return csvCell(row[key] ?? "");
+          }).join(","));
+        }
+      }
+      state.currentVersion = previous;
+      recompute();
+      const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `phigros_records_all_versions_${localDateString()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importCsv(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const rows = parseCsv(String(reader.result || "").replace(/^\uFEFF/, ""));
+        const header = rows.shift() || [];
+        const chartIdIndex = header.indexOf("chartId");
+        const accIndex = header.indexOf("acc");
+        const versionIndex = header.indexOf("version");
+        if (chartIdIndex < 0 || accIndex < 0) {
+          alert("CSV must include chartId and acc columns.");
+          return;
+        }
+        for (const row of rows) {
+          const chartId = row[chartIdIndex];
+          const acc = parseAcc(row[accIndex]);
+          const version = versionIndex >= 0 && row[versionIndex] ? row[versionIndex] : state.currentVersion;
+          if (!chartId) continue;
+          if (!state.versions[version]) state.versions[version] = { label: version, acc: {} };
+          if (acc === null) delete state.versions[version].acc[chartId];
+          else state.versions[version].acc[chartId] = String(acc);
+        }
+        saveStore();
+        render();
+      };
+      reader.readAsText(file, "utf-8");
+    }
+
+    function ensureDateValue() {
+      return els.versionDate.value || today;
+    }
+
+    function createVersion(copyCurrent) {
+      const version = ensureDateValue();
+      const existing = state.versions[version];
+      if (existing && !confirm(`${version} already exists. Switch to this date?`)) return;
+      if (!existing) {
+        state.versions[version] = { label: version, acc: copyCurrent ? { ...currentAcc() } : {} };
+      }
+      state.currentVersion = version;
+      saveStore();
+      render();
+    }
+
+    function deleteCurrentVersion() {
+      const keys = sortedVersionKeys();
+      if (keys.length <= 1) {
+        alert("Keep at least one date version.");
+        return;
+      }
+      if (!confirm(`Delete ${state.currentVersion}?`)) return;
+      delete state.versions[state.currentVersion];
+      state.currentVersion = sortedVersionKeys()[0];
+      saveStore();
+      render();
+    }
+
+    els.tbody.addEventListener("input", event => {
+      const input = event.target.closest(".acc-input");
+      if (!input) return;
+      const chartId = input.dataset.chartId;
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const acc = parseAcc(input.value);
+      const accMap = currentAcc();
+      if (acc === null) delete accMap[chartId];
+      else accMap[chartId] = input.value.trim();
+      saveStore();
+      render();
+      const next = document.querySelector(`[data-chart-id="${CSS.escape(chartId)}"]`);
+      if (next) {
+        next.focus();
+        next.selectionStart = start;
+        next.selectionEnd = end;
+      }
+    });
+
+    els.search.addEventListener("input", event => { state.query = event.target.value; render(); });
+    els.sortBy.addEventListener("change", event => { state.sortBy = event.target.value; render(); });
+    els.viewMode.addEventListener("change", event => { state.viewMode = event.target.value; render(); });
+    els.versionSelect.addEventListener("change", event => { state.currentVersion = event.target.value; saveStore(); render(); });
+    els.versionDate.addEventListener("change", event => { if (!event.target.value) event.target.value = state.currentVersion; });
+
+    document.querySelectorAll(".segmented button").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".segmented button").forEach(item => item.classList.remove("active"));
+        button.classList.add("active");
+        state.level = button.dataset.level;
+        render();
+      });
+    });
+
+    document.getElementById("newVersion").addEventListener("click", () => createVersion(false));
+    document.getElementById("copyVersion").addEventListener("click", () => createVersion(true));
+    document.getElementById("deleteVersion").addEventListener("click", deleteCurrentVersion);
+    document.getElementById("exportCsv").addEventListener("click", exportCsv);
+    document.getElementById("importFile").addEventListener("change", event => {
+      const file = event.target.files && event.target.files[0];
+      if (file) importCsv(file);
+      event.target.value = "";
+    });
+    document.getElementById("clearAcc").addEventListener("click", () => {
+      if (!confirm(`Clear ACC for ${state.currentVersion}?`)) return;
+      state.versions[state.currentVersion].acc = {};
+      saveStore();
+      render();
+    });
+
+    updateStickyHeaderOffset();
+    window.addEventListener("resize", updateStickyHeaderOffset);
+    if ("ResizeObserver" in window && els.pageHeader) new ResizeObserver(updateStickyHeaderOffset).observe(els.pageHeader);
+    render();
+    loadCharts();
+  </script>
+</body>
+</html>
