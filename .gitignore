@@ -1,0 +1,13 @@
+# Personal score exports
+*.csv
+!records_template.csv
+
+# Local third-party resource clones
+sources/
+analysis/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
